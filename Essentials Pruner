@@ -1,0 +1,148 @@
+#!/bin/bash
+
+# Turn on case-insensitive matching
+shopt -s nocasematch
+# turn on extended globbing
+shopt -s extglob
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
+sleListName="Stock/Stock-SLE-Kexts.txt"
+leListName="Stock/Stock-LE-Kexts.txt"
+
+sleCheckName="SLE-Kexts.txt"
+leCheckName="LE-Kexts.txt"
+
+function checkRequired () {
+
+    # See if our stock lists exist
+    if [[ ! -e "$DIR/$sleListName" ]] || [[ ! -e "$DIR/$leListName" ]]; then
+        clear
+        echo \#\#\# WARNING \#\#\#
+        echo
+        echo Some required files were missing...
+        echo
+        echo Make sure you have the following files in the same
+        echo directory as this script and run it again:
+        echo
+        echo \""$sleListName"\"
+        echo \""$leListName"\"
+        echo
+        echo Press \[enter\] to exit...
+        read nothing
+        
+        customQuit
+    else
+        main
+    fi
+    
+}
+
+function customQuit () {
+	clear
+	echo \#\#\# Essentials Pruner \#\#\#
+	echo by CorpNewt
+	echo 
+	echo Thanks for testing it out, for bugs/comments/complaints
+	echo send me a message on Reddit, or check out my GitHub:
+	echo 
+	echo www.reddit.com/u/corpnewt
+	echo www.github.com/corpnewt
+	echo 
+	echo Have a nice day/night!
+	echo 
+	echo 
+	shopt -u extglob
+	shopt -u nocasematch
+	exit $?
+}
+
+function containsElement () {
+  local e
+  for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
+  return 1
+}
+
+function getTimestamp () {
+    date +%Y%m%d_%H%M%S%Z
+}
+
+function main () {
+    clear
+    echo \#\#\# Essentials Pruner \#\#\#
+    echo
+    echo Please drag and drop the EssentialsList folder
+    echo you\'d like to compare:
+    echo
+    echo
+    read folderPath
+    
+    if [[ "$folderPath" == "" ]] || [[ ! -e "$folderPath" ]] || [[ ! -d "$folderPath" ]]; then
+        # Didn't select anything, doesn't exist, or not a directory
+        main
+    fi
+    
+    local __timeStamp="$( getTimestamp )"
+    
+    leExtraList=""
+    leMissingList=""
+    
+    sleExtraList=""
+    sleMissingList=""
+    
+    local kextList="No"
+    local missingList="No"
+    
+    # Check for LE-Kexts.txt and SLE-Kexts.txt
+    if [[ -e "$folderPath/$leCheckName" ]]; then
+        leExtraList="$( grep -Fxvf "$DIR/$leListName" "$folderPath/$leCheckName" | grep '\.kext$' )"
+        leMissingList="$( grep -Fxvf "$folderPath/$leCheckName" "$DIR/$leListName" | grep '\.kext$' )"
+    fi
+    
+    if [[ -e "$folderPath/$sleCheckName" ]]; then
+        sleExtraList="$( grep -Fxvf "$DIR/$sleListName" "$folderPath/$sleCheckName" | grep '\.kext$' )"
+        sleMissingList="$( grep -Fxvf "$folderPath/$sleCheckName" "$DIR/$sleListName" | grep '\.kext$' )"
+    fi
+    
+    if [[ ! "${#leExtraList}" == "0" ]]; then
+        kextList="Yes"
+        echo "DIRECTORY:/Library/Extensions" >> "$DIR/KextList-$__timeStamp.txt"
+        echo "$leExtraList" >> "$DIR/KextList-$__timeStamp.txt"
+    fi
+    
+    if [[ ! "${#sleExtraList}" == "0" ]]; then
+        kextList="Yes"
+        echo "DIRECTORY:/System/Library/Extensions" >> "$DIR/KextList-$__timeStamp.txt"
+        echo "$sleExtraList" >> "$DIR/KextList-$__timeStamp.txt"
+    fi
+    
+    if [[ ! "${#leMissingList}" == "0" ]]; then
+        missingList="Yes"
+        echo "DIRECTORY:/Library/Extensions" >> "$DIR/KextList-$__timeStamp-MISSING.txt"
+        echo "$leMissingList" >> "$DIR/KextList-$__timeStamp-MISSING.txt"
+    fi
+    
+    if [[ ! "${#sleMissingList}" == "0" ]]; then
+        missingList="Yes"
+        echo "DIRECTORY:/Library/Extensions" >> "$DIR/KextList-$__timeStamp-MISSING.txt"
+        echo "$sleMissingList" >> "$DIR/KextList-$__timeStamp-MISSING.txt"
+    fi
+    
+    if [[ "$kextList" == "Yes" ]]; then
+        echo Resulting File: "KextList-$__timeStamp.txt"
+    fi
+    
+    if [[ "$missingList" == "Yes" ]]; then
+        echo Resulting File: "KextList-$__timeStamp-MISSING.txt"
+    fi
+    
+    if [[ "$missingList" == "No" ]] && [[ "$kextList" == "No" ]]; then
+        echo No extra or missing kexts.
+    fi
+    
+    sleep 5
+    
+    customQuit
+
+}
+
+checkRequired
